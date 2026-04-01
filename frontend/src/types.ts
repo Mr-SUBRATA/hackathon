@@ -37,6 +37,7 @@ export interface RoutePlan {
 
 export interface SimulationState {
   timestamp: string;
+  tick: number;
   roads: RoadEdge[];
   incidents: Incident[];
   emergency_vehicles: EmergencyVehicle[];
@@ -44,4 +45,15 @@ export interface SimulationState {
   city_load_index: number;
   uncertainty_index: number;
   kpis: Record<string, number>;
+}
+
+export interface ScenarioItem {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface ScenarioResponse {
+  active_scenario_id: string;
+  items: ScenarioItem[];
 }

@@ -38,6 +38,7 @@ class RoutePlan(BaseModel):
 
 class SimulationState(BaseModel):
     timestamp: str
+    tick: int
     roads: List[RoadEdge]
     incidents: List[Incident]
     emergency_vehicles: List[EmergencyVehicle]

@@ -20,6 +20,24 @@ body {
   padding: 28px;
 }
 
+.shell.role-traffic_operator .hero h1 {
+  background: linear-gradient(92deg, #9cc2ff, #69e7ff, #8fffc4);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.shell.role-emergency_responder .hero h1 {
+  background: linear-gradient(92deg, #ffd1a1, #ff8f8f, #ffc58d);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.shell.role-citizen .hero h1 {
+  background: linear-gradient(92deg, #d0b5ff, #8eb4ff, #9af7ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
 .auth-shell {
   min-height: 100vh;
   display: grid;
@@ -142,6 +160,11 @@ body {
   color: #b1bbeb;
 }
 
+.muted-text {
+  color: #98a4d9;
+  font-size: 0.92rem;
+}
+
 .primary-btn {
   border: 0;
   border-radius: 12px;
@@ -211,6 +234,30 @@ body {
   padding: 16px;
 }
 
+.scenario-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.scenario-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.88rem;
+  color: #ccd6ff;
+}
+
+.scenario-controls select {
+  border: 1px solid rgba(165, 184, 255, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(7, 12, 28, 0.7);
+  color: #eff3ff;
+}
+
 .glass-panel h3 {
   margin-top: 0;
 }
@@ -234,6 +281,22 @@ body {
 .list-item span,
 .list-item small {
   color: #c2caef;
+}
+
+.list-item progress {
+  width: 100%;
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.list-item progress::-webkit-progress-bar {
+  background-color: rgba(84, 100, 158, 0.35);
+}
+
+.list-item progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #49d8f5, #7bffc0);
 }
 
 .pill {
