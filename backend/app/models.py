@@ -21,6 +21,16 @@ class Incident(BaseModel):
     active: bool = True
 
 
+class Alert(BaseModel):
+    id: str
+    title: str
+    message: str
+    severity: Literal["normal", "warning", "critical"] = "warning"
+    category: Literal["incident", "load", "confidence", "dispatch", "system"] = "incident"
+    active: bool = True
+    affected_nodes: List[str] = []
+
+
 class EmergencyVehicle(BaseModel):
     id: str
     kind: Literal["ambulance", "fire", "police"]
@@ -46,3 +56,4 @@ class SimulationState(BaseModel):
     city_load_index: float
     uncertainty_index: float
     kpis: Dict[str, float]
+    alerts: List[Alert] = Field(default_factory=list)

@@ -7,7 +7,7 @@ from typing import Dict, List
 import networkx as nx
 
 from .data_loader import load_emergency_vehicles, load_incidents, load_roads
-from .models import EmergencyVehicle, Incident, RoadEdge, RoutePlan, SimulationState
+from .models import Alert, EmergencyVehicle, Incident, RoadEdge, RoutePlan, SimulationState
 
 
 SEVERITY_WEIGHT = {"low": 0.08, "medium": 0.16, "high": 0.32, "critical": 0.48}
@@ -224,6 +224,84 @@ class TrafficEngine:
             risk_score=round(risk, 3),
         )
 
+    def _build_alerts(self, city_load_index: float, uncertainty_index: float) -> List[Alert]:
+        alerts: List[Alert] = []
+        critical_incidents = [inc for inc in self.incidents if inc.active and inc.severity == "critical"]
+        high_incidents = [inc for inc in self.incidents if inc.active and inc.severity == "high"]
+        low_confidence_roads = [road for road in self.roads if road.confidence < 0.7]
+        blocked_roads = [road for road in self.roads if road.blocked]
+
+        if critical_incidents:
+            nodes = sorted({inc.node for inc in critical_incidents})
+            alerts.append(
+                Alert(
+                    id="alert-critical-incidents",
+                    title="Critical Incident Alert",
+                    message=f"{len(critical_incidents)} critical incident(s) require immediate response in {', '.join(nodes)}.",
+                    severity="critical",
+                    category="incident",
+                    affected_nodes=nodes,
+                )
+            )
+
+        if high_incidents and not critical_incidents:
+            alerts.append(
+                Alert(
+                    id="alert-high-incidents",
+                    title="High Severity Events",
+                    message=f"{len(high_incidents)} high-severity incident(s) are active. Confirm emergency corridor priority.",
+                    severity="warning",
+                    category="incident",
+                    affected_nodes=sorted({inc.node for inc in high_incidents}),
+                )
+            )
+
+        if city_load_index > 1.05:
+            alerts.append(
+                Alert(
+                    id="alert-high-load",
+                    title="Elevated Traffic Load",
+                    message=f"City load index is {city_load_index:.2f}. Consider adaptive routing and congestion management.",
+                    severity="warning",
+                    category="load",
+                )
+            )
+
+        if uncertainty_index > 0.25:
+            alerts.append(
+                Alert(
+                    id="alert-low-confidence",
+                    title="Low Data Confidence",
+                    message=f"{len(low_confidence_roads)} road segments have confidence below 70%. Verify sensor data before rerouting.",
+                    severity="warning",
+                    category="confidence",
+                )
+            )
+
+        if blocked_roads:
+            alerts.append(
+                Alert(
+                    id="alert-roadblocks",
+                    title="Blocked Road Alert",
+                    message=f"{len(blocked_roads)} blocked segment(s) detected. Route alternatives are recommended.",
+                    severity="warning",
+                    category="dispatch",
+                )
+            )
+
+        if not alerts:
+            alerts.append(
+                Alert(
+                    id="alert-all-clear",
+                    title="System Status",
+                    message="No critical incidents detected. Monitoring remains active.",
+                    severity="normal",
+                    category="system",
+                )
+            )
+
+        return alerts
+
     def tick(self) -> SimulationState:
         self.tick_count += 1
         self._update_incidents()
@@ -250,6 +328,8 @@ class TrafficEngine:
             "active_incidents": float(active_incidents),
         }
 
+        alerts = self._build_alerts(city_load_index, uncertainty_index)
+
         state = SimulationState(
             timestamp=datetime.now(timezone.utc).isoformat(),
             tick=self.tick_count,
@@ -260,6 +340,7 @@ class TrafficEngine:
             city_load_index=round(city_load_index, 3),
             uncertainty_index=round(uncertainty_index, 3),
             kpis=kpis,
+            alerts=alerts,
         )
         self.current_state = state
         return state

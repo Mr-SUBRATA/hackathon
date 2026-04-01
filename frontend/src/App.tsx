@@ -58,6 +58,8 @@ export default function App() {
   const [activeScenarioId, setActiveScenarioId] = useState("default");
   const [autoPlay, setAutoPlay] = useState(false);
   const [autoSpeedMs, setAutoSpeedMs] = useState(2500);
+  const [alarmToasts, setAlarmToasts] = useState<Array<{ id: string; title: string; message: string; severity: string }>>([]);
+  const [shownAlarmIds, setShownAlarmIds] = useState<string[]>([]);
 
   const fetchState = async () => {
     const res = await axios.get<SimulationState>(`${API_BASE}/api/v1/state`);
@@ -114,6 +116,24 @@ export default function App() {
     }, autoSpeedMs);
     return () => window.clearInterval(timer);
   }, [autoPlay, autoSpeedMs, screen]);
+
+  useEffect(() => {
+    if (!state?.alerts) return;
+
+    const criticalAlerts = state.alerts.filter((alert) => alert.active && alert.severity === "critical");
+    const newCriticalAlerts = criticalAlerts.filter((alert) => !shownAlarmIds.includes(alert.id));
+
+    if (newCriticalAlerts.length === 0) return;
+
+    setShownAlarmIds((prev) => [...prev, ...newCriticalAlerts.map((alert) => alert.id)]);
+    setAlarmToasts((prev) => [...prev, ...newCriticalAlerts]);
+
+    newCriticalAlerts.forEach((alert) => {
+      window.setTimeout(() => {
+        setAlarmToasts((prev) => prev.filter((item) => item.id !== alert.id));
+      }, 5000);
+    });
+  }, [state?.alerts, shownAlarmIds]);
 
   const handleLogin = (event: FormEvent) => {
     event.preventDefault();
@@ -435,6 +455,9 @@ export default function App() {
     ];
   }, [profile.role, state, criticalIncidents]);
 
+  const activeAlerts = state?.alerts.filter((alert) => alert.active) ?? [];
+  const hasCriticalAlert = activeAlerts.some((alert) => alert.severity === "critical");
+
   if (screen === "landing") {
     return (
       <div className="shell auth-shell landing-shell">
@@ -601,12 +624,26 @@ export default function App() {
           </div>
         </div>
         <div className="hero-actions">
-          <button onClick={runTick} disabled={loading} className="primary-btn">
-            {loading ? "Optimizing..." : "Run Simulation Tick"}
-          </button>
-          <button onClick={() => setScreen("landing")} className="ghost-btn">
-            Logout
-          </button>
+          <div className="hero-action-buttons">
+            <button onClick={runTick} disabled={loading} className="primary-btn">
+              {loading ? "Optimizing..." : "Run Simulation Tick"}
+            </button>
+            <button type="button" className={`alarm-btn ${hasCriticalAlert ? "active" : ""}`}>
+              <span className="alarm-bell">🔔</span>
+              {activeAlerts.filter((alert) => alert.severity === "critical").length || "Alarm"}
+            </button>
+            <button onClick={() => setScreen("landing")} className="ghost-btn">
+              Logout
+            </button>
+          </div>
+          <div className="alarm-toast-panel">
+            {alarmToasts.map((toast) => (
+              <div key={toast.id} className={`toast-item toast-${toast.severity}`}>
+                <strong>{toast.title}</strong>
+                <p>{toast.message}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </header>
 

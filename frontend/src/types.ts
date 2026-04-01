@@ -35,6 +35,16 @@ export interface RoutePlan {
   risk_score: number;
 }
 
+export interface Alert {
+  id: string;
+  title: string;
+  message: string;
+  severity: "normal" | "warning" | "critical";
+  category: "incident" | "load" | "confidence" | "dispatch" | "system";
+  active: boolean;
+  affected_nodes: string[];
+}
+
 export interface SimulationState {
   timestamp: string;
   tick: number;
@@ -45,6 +55,7 @@ export interface SimulationState {
   city_load_index: number;
   uncertainty_index: number;
   kpis: Record<string, number>;
+  alerts: Alert[];
 }
 
 export interface ScenarioItem {
