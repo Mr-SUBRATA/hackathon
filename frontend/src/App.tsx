@@ -8,6 +8,34 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 type Screen = "landing" | "login" | "profile" | "dashboard";
 type UserRole = "traffic_operator" | "emergency_responder" | "citizen";
 
+type LandingHighlight = {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+};
+
+const landingHighlights: LandingHighlight[] = [
+  {
+    id: "insight",
+    title: "Live city intelligence",
+    subtitle: "Real-time analytics",
+    description: "Watch traffic load, confidence and incident risk update instantly in a responsive control panel.",
+  },
+  {
+    id: "dispatch",
+    title: "Priority dispatch",
+    subtitle: "Emergency-first routing",
+    description: "Use role-aware dashboards to send the right unit on the fastest available route every time.",
+  },
+  {
+    id: "scenario",
+    title: "Simulated outcomes",
+    subtitle: "What-if planning",
+    description: "Run ticks, see route changes, and test how incidents affect ETA and system efficiency.",
+  },
+];
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>("landing");
   const [userEmail, setUserEmail] = useState("");
@@ -25,6 +53,7 @@ export default function App() {
   const [tick, setTick] = useState(1);
   const [loading, setLoading] = useState(false);
   const [selectedInsight, setSelectedInsight] = useState<string | null>(null);
+  const [selectedLandingFeature, setSelectedLandingFeature] = useState<string>(landingHighlights[0].id);
   const [scenarios, setScenarios] = useState<ScenarioItem[]>([]);
   const [activeScenarioId, setActiveScenarioId] = useState("default");
   const [autoPlay, setAutoPlay] = useState(false);
@@ -187,6 +216,8 @@ export default function App() {
   const selectedInsightItem =
     currentInsights.find((item) => item.id === activeInsightId) ?? currentInsights[0];
   const roleThemeClass = `role-${profile.role}`;
+
+  const activeLandingFeature = landingHighlights.find((item) => item.id === selectedLandingFeature) ?? landingHighlights[0];
 
   const insightDetail = useMemo(() => {
     if (!state) {
@@ -406,18 +437,70 @@ export default function App() {
 
   if (screen === "landing") {
     return (
-      <div className="shell auth-shell">
-        <motion.section initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="auth-card">
-          <h1>Urban Traffic Command Center</h1>
-          <p>Intelligent emergency corridor management with uncertainty-aware city routing.</p>
-          <div className="feature-row">
-            <span>Multi-incident response</span>
-            <span>Priority dispatch optimization</span>
-            <span>Live simulation telemetry</span>
+      <div className="shell auth-shell landing-shell">
+        <motion.section
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="landing-panel"
+        >
+          <div className="landing-copy">
+            <span className="eyebrow">Urban Traffic Command Center</span>
+            <h1>Smart emergency command with city-scale situational awareness.</h1>
+            <p>
+              Enter a modern traffic operations platform built for command teams, emergency responders,
+              and city administrators. Explore live routing, incident heat mapping, and priority dispatch.
+            </p>
+
+            <div className="feature-row landing-features">
+              <span>Multi-incident response</span>
+              <span>Priority routing</span>
+              <span>Live adaptive simulation</span>
+            </div>
+
+            <div className="landing-actions">
+              <button className="primary-btn" onClick={() => setScreen("login")}>Enter Platform</button>
+              <button className="ghost-btn" onClick={() => setSelectedLandingFeature("scenario")}>View Preview</button>
+            </div>
           </div>
-          <button className="primary-btn auth-btn" onClick={() => setScreen("login")}>
-            Enter Platform
-          </button>
+
+          <div className="landing-preview">
+            <div className="preview-header">
+              <div>
+                <small>Interactive preview</small>
+                <h2>{activeLandingFeature.title}</h2>
+              </div>
+              <div className="preview-chip">{activeLandingFeature.subtitle}</div>
+            </div>
+
+            <div className="preview-map">
+              <div className="map-node large" />
+              <div className="map-node" style={{ top: "22%", left: "68%" }} />
+              <div className="map-node" style={{ top: "66%", left: "74%" }} />
+              <div className="map-node" style={{ top: "68%", left: "28%" }} />
+              <div className="map-line line-1" />
+              <div className="map-line line-2" />
+              <div className="map-line line-3" />
+            </div>
+
+            <div className="preview-text">
+              {activeLandingFeature.description}
+            </div>
+
+            <div className="preview-grid">
+              {landingHighlights.map((highlight) => (
+                <button
+                  key={highlight.id}
+                  type="button"
+                  className={`preview-card ${selectedLandingFeature === highlight.id ? "active" : ""}`}
+                  onMouseEnter={() => setSelectedLandingFeature(highlight.id)}
+                  onClick={() => setSelectedLandingFeature(highlight.id)}
+                >
+                  <strong>{highlight.title}</strong>
+                  <span>{highlight.subtitle}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </motion.section>
       </div>
     );
