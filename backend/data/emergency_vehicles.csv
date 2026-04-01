@@ -1,0 +1,4 @@
+id,kind,source,destination,priority
+AMB-11,ambulance,HUB_A,HOSPITAL,5
+FIRE-07,fire,FIRE_STATION,CBD,4
+POL-02,police,HUB_A,N5,3

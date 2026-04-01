@@ -1,0 +1,4 @@
+id,node,severity,kind,active
+INC-001,N3,high,accident,true
+INC-002,CBD,medium,congestion,true
+INC-003,N2,critical,roadblock,true

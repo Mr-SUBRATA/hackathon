@@ -1,0 +1,14 @@
+source,target,base_time,capacity,live_load,confidence,blocked
+HUB_A,N1,4.2,70,46,0.89,false
+HUB_A,N2,5.0,85,66,0.83,false
+N1,N3,3.4,55,42,0.91,false
+N2,N3,2.8,60,38,0.94,false
+N2,N4,4.1,75,57,0.87,false
+N3,HOSPITAL,3.9,52,41,0.82,false
+N4,HOSPITAL,2.7,48,29,0.92,false
+N4,CBD,3.8,62,47,0.86,false
+N1,FIRE_STATION,4.8,50,35,0.86,false
+FIRE_STATION,N4,3.3,46,28,0.90,false
+N3,CBD,5.5,90,74,0.80,false
+CBD,N5,4.0,88,69,0.84,false
+N5,HOSPITAL,3.1,57,45,0.88,false
