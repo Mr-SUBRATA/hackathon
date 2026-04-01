@@ -181,9 +181,191 @@ export default function App() {
   } as const;
 
   const currentInsights = insightsByRole[profile.role] ?? insightsByRole.traffic_operator;
+  const activeInsightId = selectedInsight && currentInsights.some((item) => item.id === selectedInsight)
+    ? selectedInsight
+    : currentInsights[0].id;
   const selectedInsightItem =
-    currentInsights.find((item) => item.id === selectedInsight) ?? currentInsights[0];
+    currentInsights.find((item) => item.id === activeInsightId) ?? currentInsights[0];
   const roleThemeClass = `role-${profile.role}`;
+
+  const insightDetail = useMemo(() => {
+    if (!state) {
+      return {
+        header: selectedInsightItem.label,
+        subtitle: selectedInsightItem.description,
+        rows: [],
+      };
+    }
+
+    const congestedRoads = state.roads
+      .map((road) => ({ ...road, pressure: road.live_load / road.capacity }))
+      .sort((a, b) => b.pressure - a.pressure)
+      .slice(0, 4);
+
+    const lowConfidenceRoads = state.roads
+      .filter((road) => road.confidence < 0.78)
+      .sort((a, b) => a.confidence - b.confidence)
+      .slice(0, 4);
+
+    const incidentAlerts = state.incidents
+      .filter((incident) => incident.active)
+      .sort((a, b) => {
+        const severityRank = { critical: 3, high: 2, medium: 1, low: 0 };
+        return severityRank[b.severity] - severityRank[a.severity];
+      })
+      .slice(0, 4);
+
+    const fastRoutes = state.plans
+      .slice()
+      .sort((a, b) => a.eta_minutes - b.eta_minutes)
+      .slice(0, 4);
+
+    const priorityVehicles = state.emergency_vehicles
+      .slice()
+      .sort((a, b) => a.priority - b.priority)
+      .slice(0, 4);
+
+    switch (selectedInsightItem.id) {
+      case "corridor":
+        return {
+          header: "Emergency Corridor Candidates",
+          subtitle: "Top road segments that should be reserved for emergency traffic.",
+          rows: congestedRoads.map((road) => ({
+            label: `${road.source} → ${road.target}`,
+            value: `${Math.round(road.pressure * 100)}% load`,
+            badge: road.confidence < 0.72 ? "Low confidence" : "High load",
+          })),
+        };
+      case "uncertainty":
+        return {
+          header: "Low Confidence Segments",
+          subtitle: "Roads with lower data confidence require extra verification before rerouting.",
+          rows: lowConfidenceRoads.map((road) => ({
+            label: `${road.source} → ${road.target}`,
+            value: `${road.confidence.toFixed(2)} confidence`,
+            badge: "Sensor review",
+          })),
+        };
+      case "incident":
+        return {
+          header: "High-Priority Incident Alerts",
+          subtitle: "Immediate incident response helps prevent emergency delay escalation.",
+          rows: incidentAlerts.map((incident) => ({
+            label: `${incident.kind.toUpperCase()} @ ${incident.node}`,
+            value: `${incident.severity.toUpperCase()} severity`,
+            badge: incident.severity,
+          })),
+        };
+      case "mission":
+        return {
+          header: "Fastest Missions",
+          subtitle: "Emergency routes currently showing the lowest ETA values.",
+          rows: fastRoutes.map((plan) => ({
+            label: plan.vehicle_id,
+            value: `${plan.eta_minutes} min ETA`,
+            badge: `Risk ${plan.risk_score}`,
+          })),
+        };
+      case "priority":
+        return {
+          header: "Priority Dispatch Queue",
+          subtitle: "Units with the highest priority should be staged first.",
+          rows: priorityVehicles.map((vehicle) => ({
+            label: vehicle.id,
+            value: `${vehicle.kind.toUpperCase()} from ${vehicle.source}`,
+            badge: `Priority ${vehicle.priority}`,
+          })),
+        };
+      case "bypass":
+        return {
+          header: "Route Bypass Suggestions",
+          subtitle: "Alternative corridor options for avoiding high-risk roads.",
+          rows: congestedRoads
+            .filter((road) => road.confidence > 0.75)
+            .slice(0, 3)
+            .map((road) => ({
+              label: `${road.source} → ${road.target}`,
+              value: `${Math.round(road.pressure * 100)}% load`,
+              badge: "Alternate",
+            })),
+        };
+      case "overview":
+        return {
+          header: "City Traffic Health",
+          subtitle: "A quick overview of network health and incident pressure.",
+          rows: [
+            { label: "Total roads", value: `${state.roads.length}`, badge: "Network" },
+            { label: "Active incidents", value: `${state.incidents.filter((i) => i.active).length}`, badge: "Alert" },
+            { label: "Avg confidence", value: `${(state.roads.reduce((sum, r) => sum + r.confidence, 0) / state.roads.length).toFixed(3)}`, badge: "Quality" },
+          ],
+        };
+      case "allocation":
+        return {
+          header: "Resource Allocation Guide",
+          subtitle: "Recommended focus areas for city-level resource deployment.",
+          rows: [
+            { label: "Critical incidents", value: `${state.incidents.filter((i) => i.active && i.severity === "critical").length}`, badge: "Urgent" },
+            { label: "High load roads", value: `${congestedRoads.length}`, badge: "Capacity" },
+            { label: "Low confidence roads", value: `${lowConfidenceRoads.length}`, badge: "Sensors" },
+          ],
+        };
+      case "policy":
+        return {
+          header: "Policy Trigger Metrics",
+          subtitle: "Situation metrics that help decide when to escalate controls.",
+          rows: [
+            { label: "Dispatch efficiency", value: `${state.kpis.dispatch_efficiency}%`, badge: "Efficiency" },
+            { label: "Uncertainty index", value: `${state.uncertainty_index.toFixed(3)}`, badge: "Risk" },
+            { label: "Active incidents", value: `${state.incidents.filter((i) => i.active).length}`, badge: "Stability" },
+          ],
+        };
+      default:
+        return {
+          header: selectedInsightItem.label,
+          subtitle: selectedInsightItem.description,
+          rows: [],
+        };
+    }
+  }, [selectedInsightItem, state]);
+
+  const liveFeed = useMemo(() => {
+    if (!state) return [];
+
+    const criticalCount = state.incidents.filter((incident) => incident.active && incident.severity === "critical").length;
+    const lowConfidenceCount = state.roads.filter((road) => road.confidence < 0.78).length;
+    const nextIncident = state.incidents.find((incident) => incident.active && incident.severity !== "low");
+
+    return [
+      {
+        id: "feed-1",
+        title: "Operational Alert",
+        description: criticalCount
+          ? `${criticalCount} critical incident(s) are active and require escalation.`
+          : "Traffic is stable with no critical incidents.",
+        variant: criticalCount ? "critical" : "normal",
+      },
+      {
+        id: "feed-2",
+        title: "Sensor Confidence",
+        description: `${lowConfidenceCount} road segments have low confidence values today.`,
+        variant: "warning",
+      },
+      {
+        id: "feed-3",
+        title: "Mission Routing",
+        description: nextIncident
+          ? `Avoid ${nextIncident.node} for new emergency dispatches due to ${nextIncident.kind}.`
+          : "Primary mission routes remain viable.",
+        variant: nextIncident?.severity === "critical" ? "critical" : "high",
+      },
+      {
+        id: "feed-4",
+        title: "ETA Snapshot",
+        description: `Average emergency ETA is ${state.kpis.avg_eta_minutes} minutes across all routes.`,
+        variant: "normal",
+      },
+    ];
+  }, [state]);
 
   const dashboardKpis = useMemo(() => {
     if (!state) return [];
@@ -443,8 +625,8 @@ export default function App() {
         </article>
         <article className="glass-panel">
           <h3>Road Heat Snapshot</h3>
-          <div className="list">
-            {state.roads.slice(0, 6).map((road) => {
+          <div className="road-grid">
+            {state.roads.slice(0, 4).map((road) => {
               const ratio = road.live_load / Math.max(1, road.capacity);
               return (
                 <div key={`${road.source}-${road.target}`} className="list-item">
@@ -569,7 +751,7 @@ export default function App() {
             <button
               key={insight.id}
               type="button"
-              className={`ghost-btn ${selectedInsight === insight.id ? "active" : ""}`}
+              className={`ghost-btn ${activeInsightId === insight.id ? "active" : ""}`}
               onClick={() => setSelectedInsight(insight.id)}
             >
               {insight.label}
@@ -578,11 +760,33 @@ export default function App() {
         </div>
 
         <div className="glass-card detail-card">
-          <h4>{selectedInsightItem.label}</h4>
-          <p>{selectedInsightItem.description}</p>
+          <h4>{insightDetail.header}</h4>
+          <p>{insightDetail.subtitle}</p>
+          {insightDetail.rows.length > 0 ? (
+            <div className="detail-grid">
+              {insightDetail.rows.map((row) => (
+                <div key={`${row.label}-${row.value}`} className="detail-row">
+                  <div>
+                    <strong>{row.label}</strong>
+                    <span>{row.value}</span>
+                  </div>
+                  <span className={`status-chip ${row.status?.toLowerCase() ?? "normal"}`}>{row.status}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <p className="muted-text">
-            This is static scenario guidance that complements the simulation. Tap each insight to see how the dashboard supports emergency routing, incident management, and uncertainty handling.
+            Tap each insight card to refresh the detail view. The dashboard now surfaces more operational data for better scenario decisions.
           </p>
+        </div>
+
+        <div className="feed-grid">
+          {liveFeed.map((feed) => (
+            <div key={feed.id} className={`feed-item feed-${feed.variant}`}>
+              <strong>{feed.title}</strong>
+              <p>{feed.description}</p>
+            </div>
+          ))}
         </div>
       </section>
     </div>
